@@ -7,21 +7,34 @@ const Canvas = ({ room }) => {
   const [color, setColor] = useState('#000000');
   const [lineWidth, setLineWidth] = useState(5);
 
-  // OPTIMIZATION: Track last emit time to throttle
+  // Throttling state
   const lastEmit = useRef(0);
+  const prevPos = useRef({ x: 0, y: 0 });
 
+  // 1. COORDINATE FIX: Account for CSS scaling
   const getPos = (e) => {
     const canvas = canvasRef.current;
     if (!canvas) return { x: 0, y: 0 };
+    
     const rect = canvas.getBoundingClientRect();
     
-    // Support Touch Events for Mobile
-    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    // Check if it's a touch event or mouse event
+    let clientX, clientY;
+    if (e.touches && e.touches.length > 0) {
+      clientX = e.touches[0].clientX;
+      clientY = e.touches[0].clientY;
+    } else {
+      clientX = e.clientX;
+      clientY = e.clientY;
+    }
+
+    // Calculate scale (Internal Resolution / Display Size)
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
 
     return {
-      x: clientX - rect.left,
-      y: clientY - rect.top,
+      x: (clientX - rect.left) * scaleX,
+      y: (clientY - rect.top) * scaleY,
     };
   };
 
@@ -63,24 +76,25 @@ const Canvas = ({ room }) => {
     };
   }, [room]);
 
-  const prevPos = useRef(null);
-
   const startDrawing = (e) => {
+    // Prevent scrolling on mobile when touching canvas
+    if(e.cancelable) e.preventDefault(); 
+    
     setIsDrawing(true);
     prevPos.current = getPos(e);
   };
 
   const draw = (e) => {
     if (!isDrawing) return;
+    if(e.cancelable) e.preventDefault(); // Stop scrolling
 
     const currentPos = getPos(e);
     const now = Date.now();
 
-    // OPTIMIZATION: Only draw/send if user moved enough or enough time passed
-    // Throttling to ~30-50ms significantly reduces server load without visible lag
+    // Throttling: 20ms delay OR significant movement
     if (now - lastEmit.current > 20 || 
-        Math.abs(currentPos.x - prevPos.current.x) > 2 || 
-        Math.abs(currentPos.y - prevPos.current.y) > 2) {
+        Math.abs(currentPos.x - prevPos.current.x) > 5 || 
+        Math.abs(currentPos.y - prevPos.current.y) > 5) {
             
         const drawData = {
           prevX: prevPos.current.x,
@@ -91,8 +105,8 @@ const Canvas = ({ room }) => {
           width: lineWidth,
         };
 
-        drawLine(drawData); // Draw locally instantly
-        socket.emit('draw_line', { drawData, room }); // Send to server
+        drawLine(drawData);
+        socket.emit('draw_line', { drawData, room });
         
         prevPos.current = currentPos;
         lastEmit.current = now;
@@ -121,14 +135,15 @@ const Canvas = ({ room }) => {
         onMouseMove={draw}
         onMouseUp={stopDrawing}
         onMouseLeave={stopDrawing}
-        // Touch Events (For Mobile Support)
+        // Touch Events (Mobile)
         onTouchStart={startDrawing}
         onTouchMove={draw}
         onTouchEnd={stopDrawing}
         className="bg-white rounded-lg shadow-lg cursor-crosshair touch-none w-full h-full object-contain bg-white"
       />
       
-      <div className="absolute bottom-4 flex gap-2 p-2 bg-slate-800/90 backdrop-blur rounded-xl shadow-xl border border-white/10 items-center overflow-x-auto max-w-[90%]">
+      {/* Floating Toolbar */}
+      <div className="absolute bottom-4 flex gap-2 p-2 bg-slate-800/90 backdrop-blur rounded-xl shadow-xl border border-white/10 items-center overflow-x-auto max-w-[90%] z-20">
          <input type="color" value={color} onChange={(e) => setColor(e.target.value)} className="w-8 h-8 rounded cursor-pointer border-none bg-transparent"/>
          <div className="w-px h-6 bg-slate-600 mx-1"></div>
          <div className="flex gap-1">
