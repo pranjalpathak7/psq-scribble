@@ -108,12 +108,13 @@ function App() {
   const isOwner = socket.id === ownerId;
 
   const drawerName = players.find(p => p.id === currentDrawer)?.username || "Someone";
+  const amICorrect = players.find(p => p.id === socket.id)?.hasGuessed;
 
   return (
     <div className="lg:h-screen h-auto bg-slate-900 text-white flex flex-col font-sans overflow-hidden">
       
       {/* 1. Header Bar */}
-      <div className="flex-none p-4 flex justify-between items-center bg-slate-800 shadow-md z-20 h-20">
+      <div className="flex-none p-4 flex justify-between items-center bg-slate-800 shadow-md z-20 min-h-[80px] h-auto">
          <div className="flex items-center gap-4">
             <h1 className="text-2xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-500 hidden md:block">
               PSQ-Scribble
@@ -134,21 +135,31 @@ function App() {
 
          {/* Center: Word Display */}
          {isInRoom && (
-             <div className="flex-1 text-center px-4 overflow-hidden">
-                <div className="text-2xl md:text-3xl font-bold tracking-widest uppercase truncate">
+             <div className="flex-1 flex justify-center px-2">
+                <div className="text-xl md:text-3xl font-bold uppercase text-center break-words leading-tight flex flex-col md:flex-row items-center gap-2">
                     {gameState === 'drawing' ? (
-                       isDrawer ? (
-                          <span className="text-green-400 drop-shadow-md">
+                       // SHOW WORD IF: Drawer OR Guessed Correctly
+                       (isDrawer || amICorrect) ? (
+                          <span className="text-green-400 drop-shadow-md tracking-wider">
                              {wordChoices.length > 0 ? "CHOOSING..." : secretWord}
                           </span>
                        ) : (
-                          // UPDATED: Show Masked Word (Hint) if available, else dashes
-                          <span className="text-slate-200 tracking-[0.5em]">
-                             {maskedWord ? maskedWord.split('').join(' ') : Array(wordLength).fill('_').join(' ')}
-                          </span>
+                          // SHOW DASHES IF: Haven't guessed yet
+                          <div className="flex flex-wrap justify-center gap-2">
+                              <span className="text-slate-200 tracking-[0.2em] md:tracking-[0.5em]">
+                                 {maskedWord ? maskedWord.split('').join(' ') : Array(wordLength).fill('_').join(' ')}
+                              </span>
+                              {wordLength > 0 && (
+                                <span className="text-slate-500 text-sm md:text-xl font-mono self-center">
+                                    ({wordLength})
+                                </span>
+                              )}
+                          </div>
                        )
                     ) : (
-                       gameState === 'lobby' ? "WAITING..." : "SELECTING..."
+                       <span className="tracking-widest">
+                          {gameState === 'lobby' ? "WAITING..." : "SELECTING..."}
+                       </span>
                     )}
                 </div>
              </div>

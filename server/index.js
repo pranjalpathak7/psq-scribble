@@ -103,7 +103,7 @@ const broadcastRoomUpdate = (roomId) => {
         wordLength: room.currentWord.length,
         // NEW: Send the masked word (e.g., "_ P P _ _") to everyone
         maskedWord: room.maskedWord.join(""),
-        secretWord: (isDrawer || room.gameState === 'finished') ? room.currentWord : null,
+        secretWord: (isDrawer || player.hasGuessed || room.gameState === 'finished') ? room.currentWord : null,
         ownerId: room.ownerId
       };
       
