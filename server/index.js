@@ -228,6 +228,9 @@ const startGameRound = (roomId, word) => {
   });
 };
 
+app.get("/", (req, res) => {
+  res.send("PSQ-Scribble Server is Running Live!");
+});
 
 io.on("connection", (socket) => {
   
