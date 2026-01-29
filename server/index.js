@@ -196,7 +196,7 @@ const nextTurn = (roomId) => {
   broadcastRoomUpdate(roomId);
   io.to(drawerId).emit("choose_word", options);
   
-  startTimer(roomId, 15, () => {
+  startTimer(roomId, 25, () => {
     startGameRound(roomId, options[0]);
   });
 };
