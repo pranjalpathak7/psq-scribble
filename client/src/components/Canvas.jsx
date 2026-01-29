@@ -7,13 +7,21 @@ const Canvas = ({ room }) => {
   const [color, setColor] = useState('#000000');
   const [lineWidth, setLineWidth] = useState(5);
 
+  // OPTIMIZATION: Track last emit time to throttle
+  const lastEmit = useRef(0);
+
   const getPos = (e) => {
     const canvas = canvasRef.current;
     if (!canvas) return { x: 0, y: 0 };
     const rect = canvas.getBoundingClientRect();
+    
+    // Support Touch Events for Mobile
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
     return {
-      x: e.clientX - rect.left,
-      y: e.clientY - rect.top,
+      x: clientX - rect.left,
+      y: clientY - rect.top,
     };
   };
 
@@ -32,12 +40,8 @@ const Canvas = ({ room }) => {
   };
 
   useEffect(() => {
-    // 1. Listen for new lines
-    socket.on('draw_line', (data) => {
-      drawLine(data);
-    });
-
-    // 2. Listen for clear
+    socket.on('draw_line', (data) => drawLine(data));
+    
     socket.on('clear_canvas', () => {
       const canvas = canvasRef.current;
       if(canvas) {
@@ -46,15 +50,10 @@ const Canvas = ({ room }) => {
       }
     });
 
-    // 3. Listen for History Load (The Sync Fix)
     socket.on('load_canvas_history', (history) => {
-        history.forEach(line => {
-            drawLine(line);
-        });
+        history.forEach(line => drawLine(line));
     });
 
-    // --- TRIGGER THE REQUEST ---
-    // As soon as this component mounts, ask server for current drawing
     socket.emit("request_canvas_history", room);
 
     return () => {
@@ -75,18 +74,29 @@ const Canvas = ({ room }) => {
     if (!isDrawing) return;
 
     const currentPos = getPos(e);
-    const drawData = {
-      prevX: prevPos.current.x,
-      prevY: prevPos.current.y,
-      currentX: currentPos.x,
-      currentY: currentPos.y,
-      color,
-      width: lineWidth,
-    };
+    const now = Date.now();
 
-    drawLine(drawData);
-    socket.emit('draw_line', { drawData, room });
-    prevPos.current = currentPos;
+    // OPTIMIZATION: Only draw/send if user moved enough or enough time passed
+    // Throttling to ~30-50ms significantly reduces server load without visible lag
+    if (now - lastEmit.current > 20 || 
+        Math.abs(currentPos.x - prevPos.current.x) > 2 || 
+        Math.abs(currentPos.y - prevPos.current.y) > 2) {
+            
+        const drawData = {
+          prevX: prevPos.current.x,
+          prevY: prevPos.current.y,
+          currentX: currentPos.x,
+          currentY: currentPos.y,
+          color,
+          width: lineWidth,
+        };
+
+        drawLine(drawData); // Draw locally instantly
+        socket.emit('draw_line', { drawData, room }); // Send to server
+        
+        prevPos.current = currentPos;
+        lastEmit.current = now;
+    }
   };
 
   const stopDrawing = () => {
@@ -100,28 +110,27 @@ const Canvas = ({ room }) => {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
   };
 
-  // ... (imports and logic remain same)
-
   return (
     <div className="flex flex-col items-center gap-2 w-full h-full">
-      {/* FIX: Width 100% and Height 100% to fill the parent container */}
       <canvas
         ref={canvasRef}
         width={800}
-        height={600} // Increased internal resolution slightly
+        height={600}
+        // Mouse Events
         onMouseDown={startDrawing}
         onMouseMove={draw}
         onMouseUp={stopDrawing}
         onMouseLeave={stopDrawing}
+        // Touch Events (For Mobile Support)
+        onTouchStart={startDrawing}
+        onTouchMove={draw}
+        onTouchEnd={stopDrawing}
         className="bg-white rounded-lg shadow-lg cursor-crosshair touch-none w-full h-full object-contain bg-white"
       />
       
-      {/* Floating Toolbar */}
       <div className="absolute bottom-4 flex gap-2 p-2 bg-slate-800/90 backdrop-blur rounded-xl shadow-xl border border-white/10 items-center overflow-x-auto max-w-[90%]">
          <input type="color" value={color} onChange={(e) => setColor(e.target.value)} className="w-8 h-8 rounded cursor-pointer border-none bg-transparent"/>
-         
          <div className="w-px h-6 bg-slate-600 mx-1"></div>
-
          <div className="flex gap-1">
             {[2, 5, 10, 20].map(size => (
                <button 
@@ -133,12 +142,8 @@ const Canvas = ({ room }) => {
                </button>
             ))}
          </div>
-         
          <div className="w-px h-6 bg-slate-600 mx-1"></div>
-
-         <button onClick={clearCanvas} className="bg-red-500 hover:bg-red-600 text-white p-1 rounded transition" title="Clear Canvas">
-            🗑️
-         </button>
+         <button onClick={clearCanvas} className="bg-red-500 hover:bg-red-600 text-white p-1 rounded transition" title="Clear">🗑️</button>
       </div>
     </div>
   );

@@ -18,11 +18,68 @@ const io = new Server(server, {
 
 const rooms = {};
 
+// server/index.js
+
 const WORDS = [
-  "apple", "banana", "house", "car", "tree", "computer", "sun", "moon", "star", 
-  "robot", "cat", "dog", "fish", "guitar", "elephant", "flower", "mountain", 
-  "pizza", "helicopter", "rainbow", "pencil", "spider", "clock", "ghost", "turtle",
-  "book", "chair", "table", "shoe", "hat", "glasses", "key", "phone", "cloud"
+  // --- ANIMALS & CREATURES ---
+  "armadillo", "baboon", "badger", "bat", "beaver", "bison", "camel", "chameleon", "cheetah", 
+  "chimpanzee", "cobra", "crab", "crocodile", "dinosaur", "dolphin", "dragon", "duck", "eagle", 
+  "elephant", "flamingo", "frog", "giraffe", "gorilla", "hedgehog", "hippo", "hyena", "iguana", 
+  "jellyfish", "kangaroo", "koala", "lemur", "lion", "llama", "lobster", "meerkat", "mosquito", 
+  "narwhal", "octopus", "ostrich", "owl", "panda", "pangolin", "parrot", "peacock", "penguin", 
+  "platypus", "porcupine", "pufferfish", "rabbit", "raccoon", "rhino", "scorpion", "seahorse", 
+  "seal", "shark", "sheep", "sloth", "snail", "snake", "spider", "squid", "squirrel", "starfish", 
+  "swan", "tiger", "toucan", "turtle", "unicorn", "vulture", "walrus", "whale", "wolf", "worm", 
+  "yeti", "zebra",
+
+  // --- CHARACTERS & PROFESSIONS ---
+  "alien", "angel", "artist", "astronaut", "baby", "baker", "barber", "batman", "chef", "clown", 
+  "cowboy", "cyclops", "detective", "devil", "diver", "doctor", "dracula", "elf", "farmer", 
+  "firefighter", "genie", "ghost", "giant", "gladiator", "gnome", "goblin", "godzilla", "hacker", 
+  "jester", "king", "knight", "leprechaun", "magician", "mermaid", "mime", "minion", "monster", 
+  "mummy", "ninja", "nurse", "pilot", "pirate", "plumber", "police", "president", "princess", 
+  "queen", "robot", "santa", "scarecrow", "scientist", "sheriff", "skeleton", "soldier", "spider-man", 
+  "spy", "superhero", "surfer", "teacher", "thief", "vampire", "viking", "witch", "wizard", "zombie",
+
+  // --- OBJECTS & ITEMS ---
+  "accordion", "airplane", "alarm clock", "anchor", "anvil", "apple", "backpack", "balloon", "banana", 
+  "bandage", "basket", "battery", "bed", "bicycle", "binoculars", "bomb", "book", "boomerang", 
+  "bottle", "bow", "box", "brain", "bread", "bridge", "broom", "brush", "bucket", "bus", "cake", 
+  "calculator", "camera", "candle", "cannon", "car", "carrot", "castle", "catapult", "chair", 
+  "chainsaw", "cheese", "chess", "clock", "cloud", "compass", "computer", "cookie", "corn", "crayon", 
+  "crown", "cup", "dagger", "diamond", "dice", "door", "donut", "drum", "dynamite", "egg", 
+  "electricity", "envelope", "eraser", "eye", "fan", "feather", "fence", "fire", "flashlight", 
+  "flower", "flute", "fork", "fossil", "fridge", "ghost", "glasses", "glove", "glue", "guitar", 
+  "gun", "hammer", "hat", "headphones", "heart", "helicopter", "helmet", "hook", "house", "ice cream", 
+  "igloo", "island", "jacket", "jar", "jewel", "key", "kite", "knife", "ladder", "lamp", "laptop", 
+  "leaf", "lightbulb", "lighter", "lighthouse", "lightning", "lock", "magnet", "map", "mask", "match", 
+  "microphone", "microscope", "mirror", "money", "moon", "mountain", "mousetrap", "mushroom", "nail", 
+  "needle", "net", "newspaper", "nose", "notebook", "ocean", "oven", "paintbrush", "pants", "paper", 
+  "parachute", "pencil", "phone", "piano", "pillow", "pipe", "pizza", "planet", "plant", "plate", 
+  "plug", "pocket", "poison", "pot", "potato", "printer", "prism", "pumpkin", "purse", "pyramid", 
+  "radar", "radio", "rainbow", "ring", "rocket", "roof", "rope", "rug", "ruler", "sandwich", 
+  "satellite", "saxophone", "scale", "scissors", "screw", "shoe", "shovel", "skateboard", "skull", 
+  "skyscraper", "sled", "soap", "sock", "sofa", "spoon", "stairs", "star", "statue", "stethoscope", 
+  "stove", "submarine", "sun", "sunglasses", "sword", "syringe", "table", "tank", "tape", "target", 
+  "taxi", "teacup", "telescope", "television", "tent", "thermometer", "thunder", "ticket", "tie", 
+  "toast", "toilet", "tomato", "tooth", "toothbrush", "torch", "tornado", "towel", "toy", "tractor", 
+  "train", "trash", "tree", "triangle", "trophy", "truck", "trumpet", "umbrella", "vacuum", "vase", 
+  "violin", "volcano", "wall", "watch", "water", "waterfall", "watermelon", "web", "well", "wheel", 
+  "whistle", "window", "wing", "witch", "wood", "worm", "x-ray", "yoyo", "zipper",
+
+  // --- ACTIONS & CONCEPTS ---
+  "archery", "balance", "camping", "clapping", "climbing", "cooking", "crying", "dancing", "digging", 
+  "diving", "drawing", "dream", "drinking", "driving", "eating", "explosion", "falling", "fighting", 
+  "fishing", "flying", "game over", "gardening", "hiding", "hiking", "hitting", "hunting", "jumping", 
+  "kick", "kissing", "knitting", "laughing", "magic", "melting", "nightmare", "painting", "party", 
+  "picnic", "playing", "praying", "punch", "racing", "reading", "running", "scream", "shaking", 
+  "shopping", "singing", "skating", "skiing", "sleeping", "smiling", "smoking", "sneezing", "snoring", 
+  "swimming", "swinging", "thinking", "throwing", "vomit", "walking", "waving", "whispering", "writing", "yoga",
+
+  // ---KGP Lingo---
+  "nalanda", "mainbuilding", "toat", "vikramshila", "cic", "dc", "mc", "aerospace", "mmm", "lbs", "azad", "ms", 
+  "civil", "chemistry", "amit", "guru", "maneesh", "fuck", "moon", "nigga", "rajesh", "gymkhana", "pepsicut", "snvh",
+  "fakka", "porn", "harsh", "psq", "pranjal",
 ];
 
 const getRoom = (roomId) => rooms[roomId];
@@ -279,7 +336,11 @@ io.on("connection", (socket) => {
   socket.on("draw_line", (data) => {
     const room = getRoom(data.room);
     if (room) {
-        room.drawHistory.push(data.drawData); 
+        // SAFETY CAP: Prevent memory explosion
+        // If history is huge (e.g. > 3000 lines), stop saving but still broadcast
+        if (room.drawHistory.length < 3000) {
+            room.drawHistory.push(data.drawData); 
+        }
         socket.to(data.room).emit("draw_line", data.drawData);
     }
   });
